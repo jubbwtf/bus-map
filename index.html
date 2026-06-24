@@ -223,14 +223,12 @@ html, body {
     width: 100%;
     padding: 0;
     margin: 0;
-    font-family: sans-serif;
-    font-size: small;
-    overflow: hidden; /* Stops ugly mobile bounce-scrolling */
+    overflow: hidden;
 }
 #map {
     width: 100%;
-    height: 100vh; 
-    height: 100dvh; /* Dynamic viewport height - fixes mobile URL bar issues */
+    height: 100vh;
+    height: 100dvh;
 }
 .ol-control {
 	clear: both;
@@ -609,13 +607,29 @@ td video {
 
 
 .ol-attribution {
-	display: none;
+    position: fixed !important;
+    bottom: 8px !important;
+    right: 8px !important;
+    left: auto !important;
+    top: auto !important;
+    background-color: rgba(255, 255, 255, 0.8) !important;
+    border-radius: 4px !important;
+    padding: 4px 8px !important;
+    font-size: 12px !important;
+    z-index: 999 !important;
 }
+
 .bottom-attribution {
-	float: right;
-	position: relative;
-	display: flex;
-	}
+    position: fixed !important;
+    bottom: 8px !important;
+    right: 8px !important;
+    left: auto !important;
+    background-color: rgba(255, 255, 255, 0.8) !important;
+    border-radius: 4px !important;
+    padding: 4px 8px !important;
+    font-size: 12px !important;
+    z-index: 999 !important;
+}
 .bottom-attribution button {
 	display: none;
 	}
@@ -1034,9 +1048,8 @@ html, body {
     </head>
     <body>
 
-        <button id="custom-gps-btn" style="position: fixed; bottom: 30px; right: 20px; z-index: 9999; width: 55px; height: 55px; border-radius: 50%; background: #ffffff; border: 2px solid #ccc; font-size: 26px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: pointer; display: flex; align-items: center; justify-content: center;">📍
+        <button id="gps-btn" style="position:fixed; bottom:30px; right:20px; z-index:9999; width:60px; height:60px; border-radius:50%; background:white; border:2px solid #ccc; font-size:28px; box-shadow:0 4px 10px rgba(0,0,0,0.3); cursor:pointer;">📍</button>
 
-        </button>
         <div id="map">
             <div id="popup" class="ol-popup">
                 <a href="#" id="popup-closer" class="ol-popup-closer"></a>
@@ -3307,12 +3320,11 @@ map.addControl(bottomAttribution);
 
 var attributionList = document.createElement('li');
 attributionList.innerHTML = `
-	<a href="https://github.com/qgis2web/qgis2web">qgis2web</a> &middot;
-	<a href="https://openlayers.org/">OpenLayers</a> &middot;
-	<a href="https://qgis.org/">QGIS</a>	
+<a href="https://github.com/qgis2web/qgis2web">qgis2web</a> &middot;
+<a href="https://openlayers.org/">OpenLayers</a> &middot;
+<a href="https://qgis.org/">QGIS</a>
 `;
 bottomAttribution.element.appendChild(attributionList);
-
 
 // Disable "popup on hover" or "highlight on hover" if ol-control mouseover
 var preDoHover = doHover;
@@ -3398,81 +3410,150 @@ if (isSmallScreen) {
 
         </script>
         
-        <!-- фикс -->
         <script>
-        // Функция, которая насильно удерживает интерфейс вменяемым
-        function fixOpenLayersChaos() {
-            // 1. Лечим поп-ап, если он открыт
-            const popup = document.getElementById('popup');
-            if (popup && popup.style.display === 'block') {
-                popup.style.backgroundColor = '#ffffff';
-                popup.style.borderRadius = '14px';
-                popup.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.15)';
-                popup.style.padding = '14px';
-                popup.style.border = 'none';
-                popup.style.minWidth = '220px';
-                popup.style.maxWidth = '80vw';
-            }
-
-            // 2. Спасаем копирайт OpenStreetMap от исчезновения
-            const attributions = document.querySelectorAll('.ol-attribution');
-            attributions.forEach(el => {
-                el.style.setProperty('display', 'block', 'important');
-                el.style.backgroundColor = 'rgba(255, 255, 255, 0.6)';
-                el.style.borderRadius = '4px';
-                el.style.padding = '2px 6px';
-            });
-
-            // 3. Возвращаем дефолтный вид кнопкам управления
-            const controls = document.querySelectorAll('.ol-control');
-            controls.forEach(el => {
-                el.style.setProperty('display', 'block', 'important');
-            });
-        }
-
-        // Запускаем фикс каждые 100 миллисекунд и при любом движении по карте
-        setInterval(fixOpenLayersChaos, 100);
-        
-        // Ждем инициализации карты и вешаем слежку на скролл/драг
-        setTimeout(() => {
-            if (typeof map !== 'undefined') {
-                map.on('moveend', fixOpenLayersChaos);
-                map.on('movestart', fixOpenLayersChaos);
-            }
-        }, 500);
-        </script>
-
-            <script>
+// GPS кнопка
 document.getElementById('custom-gps-btn').addEventListener('click', function() {
-    var btn = this;
-    btn.innerHTML = '⏳'; // Show loading
-    btn.style.pointerEvents = 'none'; // Prevent double clicks
-    
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(function(position) {
-            // Convert GPS coordinates to map projection (EPSG:3857)
-            var coord = ol.proj.fromLonLat([position.coords.longitude, position.coords.latitude]);
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            const coord = ol.proj.fromLonLat([lon, lat]);
             
-            // Fly to location
+            // Центрируем карту
             map.getView().animate({
                 center: coord,
                 zoom: 16,
                 duration: 1000
             });
             
-            btn.innerHTML = '📍';
-            btn.style.pointerEvents = 'auto';
+            // Добавляем маркер местоположения
+            addLocationMarker(lat, lon);
+            
+            // Целевая точка
+            const targetLat = 61.001272;
+            const targetLon = 68.994418;
+            
+            // Рассчитываем расстояние
+            const distance = calculateDistance(lat, lon, targetLat, targetLon);
+            showDistanceInfo(distance);
+            
         }, function(error) {
-            alert('GPS Error: ' + error.message + '\n\nNote: GPS requires HTTPS or localhost.');
-            btn.innerHTML = '📍';
-            btn.style.pointerEvents = 'auto';
+            alert('Ошибка GPS: ' + error.message);
+        }, {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
         });
-    } else {
-        alert('Geolocation is not supported by this browser.');
-        btn.innerHTML = '📍';
-        btn.style.pointerEvents = 'auto';
     }
 });
+
+// Добавляем визуальный маркер местоположения
+function addLocationMarker(lat, lon) {
+    // Удаляем старый маркер если есть
+    if (window.locationMarker) {
+        map.removeLayer(window.locationMarker);
+    }
+    
+    const coord = ol.proj.fromLonLat([lon, lat]);
+    
+    // Создаем слой с маркером
+    const markerLayer = new ol.layer.Vector({
+        source: new ol.source.Vector({
+            features: [
+                // Внешний круг (пульсация)
+                new ol.Feature({
+                    geometry: new ol.geom.Point(coord)
+                }),
+                // Внутренняя точка
+                new ol.Feature({
+                    geometry: new ol.geom.Point(coord)
+                })
+            ]
+        }),
+        style: [
+            // Внешний синий круг
+            new ol.style.Style({
+                image: new ol.style.Circle({
+                    radius: 12,
+                    fill: new ol.style.Fill({
+                        color: 'rgba(0, 120, 255, 0.3)'
+                    }),
+                    stroke: new ol.style.Stroke({
+                        color: 'rgba(0, 120, 255, 0.8)',
+                        width: 2
+                    })
+                })
+            }),
+            // Внутренняя белая точка
+            new ol.style.Style({
+                image: new ol.style.Circle({
+                    radius: 6,
+                    fill: new ol.style.Fill({
+                        color: '#ffffff'
+                    }),
+                    stroke: new ol.style.Stroke({
+                        color: '#0078FF',
+                        width: 3
+                    })
+                })
+            })
+        ],
+        zIndex: 9999
+    });
+    
+    map.addLayer(markerLayer);
+    window.locationMarker = markerLayer;
+}
+
+// Расчет расстояния между двумя точками (Haversine formula)
+function calculateDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371; // Радиус Земли в километрах
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+}
+
+// Показываем информацию о расстоянии
+function showDistanceInfo(distanceKm) {
+    // Создаем или обновляем информационное окно
+    let infoBox = document.getElementById('distance-info');
+    if (!infoBox) {
+        infoBox = document.createElement('div');
+        infoBox.id = 'distance-info';
+        infoBox.style.position = 'fixed';
+        infoBox.style.bottom = '100px';
+        infoBox.style.right = '20px';
+        infoBox.style.backgroundColor = '#ffffff';
+        infoBox.style.padding = '12px 16px';
+        infoBox.style.borderRadius = '8px';
+        infoBox.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+        infoBox.style.fontFamily = 'Arial, sans-serif';
+        infoBox.style.fontSize = '14px';
+        infoBox.style.zIndex = '9998';
+        document.body.appendChild(infoBox);
+    }
+    
+    // Форматируем расстояние
+    let distanceText;
+    if (distanceKm < 1) {
+        distanceText = (distanceKm * 1000).toFixed(0) + ' м';
+    } else {
+        distanceText = distanceKm.toFixed(2) + ' км';
+    }
+    
+    infoBox.innerHTML = `
+        <div style="font-weight: bold; color: #0078FF; margin-bottom: 4px;">
+            📍 Расстояние до цели
+        </div>
+        <div style="color: #333;">
+            ${distanceText}
+        </div>
+    `;
+}
 </script>
 
     </body>
