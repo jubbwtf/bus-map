@@ -1017,3 +1017,43 @@ html, body {
   * { transition: none !important; animation: none !important; }
 }
 
+/* Кнопка определения местоположения */
+#my-gps-btn {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background-color: #ffffff;
+    border: none;
+    border-radius: 50%;
+    width: 56px;
+    height: 56px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    font-size: 24px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    transition: transform 0.2s, background-color 0.2s;
+}
+
+#my-gps-btn:active {
+    transform: scale(0.92);
+    background-color: #f5f5f5;
+}
+
+/* Информационная плашка с расстоянием */
+#distance-box {
+    position: fixed;
+    bottom: 96px;
+    right: 24px;
+    background-color: #ffffff;
+    padding: 12px 18px;
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    z-index: 1000;
+    display: none; /* Появляется только после клика на GPS */
+    min-width: 100px;
+    text-align: center;
+}

@@ -423,30 +423,31 @@ function onSingleClickWMS(evt) {
 map.on('singleclick', onSingleClickFeatures);
 map.on('singleclick', onSingleClickWMS);
 
-//geolocate - КНОПКА GPS
+// --- СИСТЕМА ГЕОЛОКАЦИИ И РАСЧЕТА ДИСТАНЦИИ ---
+
+// Целевая точка (61.001272, 68.994418) -> в OpenLayers сначала Longitude, затем Latitude
+var TARGET_COORD = ol.proj.fromLonLat([68.994418, 61.001272]);
+
+// Создаем кнопку GPS
 var gpsBtn = document.createElement('button');
 gpsBtn.id = 'my-gps-btn';
 gpsBtn.innerHTML = '📍';
 gpsBtn.title = 'Моё местоположение';
 document.body.appendChild(gpsBtn);
 
-// Переменные для маркера и линии
-var gpsMarkerLayer = null;
-var gpsAccuracyLayer = null;
-var distanceLineLayer = null;
-var distanceLabelLayer = null;
-
-// Целевая точка
-var TARGET_COORD = ol.proj.fromLonLat([68.994418, 61.001272]);
-
-// Контейнер расстояния
+// Создаем контейнер для отображения расстояния
 var distanceBox = document.createElement('div');
 distanceBox.id = 'distance-box';
 document.body.appendChild(distanceBox);
 
-// Функция расчёта расстояния (Haversine)
+// Переменные для слоев графики
+var gpsMarkerLayer = null;
+var gpsAccuracyLayer = null;
+var distanceLineLayer = null;
+
+// Функция расчёта расстояния по формуле гаверсинусов (в км)
 function getDistanceKm(lonLat1, lonLat2) {
-    var R = 6371;
+    var R = 6371; // Радиус Земли
     var dLat = (lonLat2[1] - lonLat1[1]) * Math.PI / 180;
     var dLon = (lonLat2[0] - lonLat1[0]) * Math.PI / 180;
     var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
@@ -455,15 +456,20 @@ function getDistanceKm(lonLat1, lonLat2) {
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
-function updateDistance(userLonLat) {
+// Обновление плашки расстояния и прорисовка линии пути
+function updateDistanceAndPath(userLonLat) {
     var dist = getDistanceKm(userLonLat, [68.994418, 61.001272]);
     var text = dist < 1 ? Math.round(dist * 1000) + ' м' : dist.toFixed(2) + ' км';
-    distanceBox.innerHTML = '<div style="font-weight:bold;color:#0066ff;">📍 До цели</div><div style="font-size:20px;margin-top:4px;">' + text + '</div>';
+    
+    distanceBox.innerHTML = '<div style="font-weight:600;color:#0066ff;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;">До цели</div><div style="font-size:20px;font-weight:bold;margin-top:2px;color:#1e1e1e;">' + text + '</div>';
     distanceBox.style.display = 'block';
     
-    // Рисуем линию до цели
+    // Удаляем старую линию пути, если она есть
     if (distanceLineLayer) map.removeLayer(distanceLineLayer);
+    
     var userProj = ol.proj.fromLonLat(userLonLat);
+    
+    // Рисуем кратчайший путь (линию) до цели
     distanceLineLayer = new ol.layer.Vector({
         source: new ol.source.Vector({
             features: [new ol.Feature({
@@ -472,9 +478,9 @@ function updateDistance(userLonLat) {
         }),
         style: new ol.style.Style({
             stroke: new ol.style.Stroke({
-                color: 'rgba(0,102,255,0.5)',
-                width: 3,
-                lineDash: [10, 10]
+                color: '#0066ff',
+                width: 4,
+                lineDash: [6, 8] // Красивый пунктир
             })
         }),
         zIndex: 998
@@ -482,27 +488,27 @@ function updateDistance(userLonLat) {
     map.addLayer(distanceLineLayer);
 }
 
+// Отображение маркера пользователя на карте
 function showGpsMarker(lon, lat) {
     var coord = ol.proj.fromLonLat([lon, lat]);
     
-    // Удаляем старые слои
     if (gpsMarkerLayer) map.removeLayer(gpsMarkerLayer);
     if (gpsAccuracyLayer) map.removeLayer(gpsAccuracyLayer);
     
-    // Круг точности
+    // Зона погрешности (круг)
     gpsAccuracyLayer = new ol.layer.Vector({
         source: new ol.source.Vector({
-            features: [new ol.Feature(new ol.geom.Circle(coord, 50))]
+            features: [new ol.Feature(new ol.geom.Circle(coord, 35))]
         }),
         style: new ol.style.Style({
-            fill: new ol.style.Fill({color: 'rgba(0,102,255,0.15)'}),
-            stroke: new ol.style.Stroke({color: 'rgba(0,102,255,0.4)', width: 1})
+            fill: new ol.style.Fill({color: 'rgba(0,102,255,0.12)'}),
+            stroke: new ol.style.Stroke({color: 'rgba(0,102,255,0.3)', width: 1})
         }),
         zIndex: 997
     });
     map.addLayer(gpsAccuracyLayer);
     
-    // Маркер (точка с обводкой)
+    // Точка местоположения
     gpsMarkerLayer = new ol.layer.Vector({
         source: new ol.source.Vector({
             features: [new ol.Feature(new ol.geom.Point(coord))]
@@ -511,7 +517,7 @@ function showGpsMarker(lon, lat) {
             new ol.style.Style({
                 image: new ol.style.Circle({
                     radius: 12,
-                    fill: new ol.style.Fill({color: 'rgba(0,102,255,0.3)'}),
+                    fill: new ol.style.Fill({color: 'rgba(0,102,255,0.25)'}),
                     stroke: new ol.style.Stroke({color: '#ffffff', width: 2})
                 })
             }),
@@ -528,137 +534,48 @@ function showGpsMarker(lon, lat) {
     map.addLayer(gpsMarkerLayer);
 }
 
+// Обработчик клика по кнопке GPS
 gpsBtn.addEventListener('click', function() {
-    this.innerHTML = '⏳';
+    var self = this;
+    self.innerHTML = '⏳';
+    
     if (!navigator.geolocation) {
-        alert('GPS не поддерживается');
-        this.innerHTML = '📍';
+        alert('GPS не поддерживается вашим браузером');
+        self.innerHTML = '📍';
         return;
     }
+    
     navigator.geolocation.getCurrentPosition(
         function(pos) {
             var lon = pos.coords.longitude;
             var lat = pos.coords.latitude;
+            
+            // Отображаем графику
             showGpsMarker(lon, lat);
-            updateDistance([lon, lat]);
+            updateDistanceAndPath([lon, lat]);
+            
+            // Фокусируем карту на маркере с плавной анимацией
             map.getView().animate({
                 center: ol.proj.fromLonLat([lon, lat]),
                 zoom: 16,
-                duration: 1000
+                duration: 800 // Время анимации в мс
             });
-            gpsBtn.innerHTML = '📍';
+            
+            self.innerHTML = '📍';
         },
         function(err) {
-            gpsBtn.innerHTML = '📍';
-            var msg = 'Ошибка GPS';
-            if (err.code === 1) msg = 'Доступ к GPS запрещён. Нажми на замочек в адресной строке → Разрешить геолокацию';
-            if (err.code === 2) msg = 'GPS недоступен. Включи геолокацию в настройках';
+            self.innerHTML = '📍';
+            var msg = 'Ошибка получения координат';
+            if (err.code === 1) msg = 'Доступ к GPS заблокирован. Разрешите геолокацию в настройках браузера.';
+            if (err.code === 2) msg = 'Не удалось определить положение. Проверьте, включен ли GPS на устройстве.';
             alert(msg);
         },
         {enableHighAccuracy: true, timeout: 10000}
     );
 });
 
-// Create marker for geolocation
-var accuracyFeature = new ol.Feature();
-var positionFeature = new ol.Feature();
-var geolocationFeatures = [accuracyFeature, positionFeature];
-
-var geolocationVector = new ol.layer.Vector({
-    source: new ol.source.Vector({
-        features: geolocationFeatures,
-        useSpatialIndex: false
-    }),
-    style: [
-        new ol.style.Style({
-            image: new ol.style.Circle({
-                radius: 8,
-                fill: new ol.style.Fill({color: '#4CAF50'}),
-                stroke: new ol.style.Stroke({color: '#ffffff', width: 2})
-            })
-        }),
-        new ol.style.Style({
-            stroke: new ol.style.Stroke({color: '#4CAF50', width: 2}),
-            fill: new ol.style.Fill({color: 'rgba(76, 175, 80, 0.3)'})
-        })
-    ]
-});
-
-geolocationControl.on('change', function() {
-    var accuracy = geolocationControl.getAccuracy();
-    var position = geolocationControl.getPosition();
-    
-    if (accuracy && position) {
-        var accuracyGeometry = ol.geom.Polygon.circular(position, accuracy, 32);
-        accuracyFeature.setGeometry(accuracyGeometry);
-        positionFeature.setGeometry(new ol.geom.Point(position));
-    }
-});
-
-// Add geolocation button
-var geolocateButton = document.createElement('button');
-geolocateButton.className = 'ol-zoom-in geolocate';
-geolocateButton.innerHTML = '📍';
-geolocateButton.title = 'Find my location';
-geolocateButton.onclick = function() {
-    var tracking = geolocationControl.getTracking();
-    geolocationControl.setTracking(!tracking);
-    if (!tracking) {
-        map.addLayer(geolocationVector);
-    }
-};
-
-// Add button to map
-var geolocateElement = document.createElement('div');
-geolocateElement.className = 'geolocate ol-unselectable ol-control';
-geolocateElement.appendChild(geolocateButton);
-map.addControl(new ol.control.Control({element: geolocateElement}));
-
-//get container
-var topLeftContainerDiv = document.getElementById('top-left-container')
-var bottomLeftContainerDiv = document.getElementById('bottom-left-container')
-var bottomRightContainerDiv = document.getElementById('bottom-right-container')
-
-//title
-
-//abstract
 
 
-//geolocate
-
-
-
-//measurement
-
-
-
-
-
-//geocoder
-
-var geocoder = new Geocoder('nominatim', {
-  provider: 'osm',
-  lang: 'en-US',
-  placeholder: 'Search place or address ...',
-  limit: 5,
-  keepOpen: true,
-});
-map.addControl(geocoder);
-document.getElementsByClassName('gcd-gl-btn')[0].className += ' fa fa-search';
-
-
-//layer search
-
-var searchLayer = new SearchLayer({
-    layer: lyr_2_2,
-    colName: 'маршр',
-    zoom: 10,
-    collapsed: true,
-    map: map
-});
-map.addControl(searchLayer);
-document.getElementsByClassName('search-layer')[0].getElementsByTagName('button')[0].className += ' fa fa-binoculars';
-document.getElementsByClassName('search-layer-input-search')[0].placeholder = 'Search feature ...';
     
 
 //scalebar
