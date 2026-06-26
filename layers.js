@@ -22,9 +22,9 @@ var lyr__1 = new ol.layer.Vector({
                 declutter: false,
                 source:jsonSource__1, 
                 style: style__1,
-                popuplayertitle: 'поле',
+                popuplayertitle: 'остановка',
                 interactive: true,
-                title: '<img src="styles/legend/_1.png" /> поле'
+                title: '<img src="styles/legend/_1.png" /> остановка'
             });
 var format_2_2 = new ol.format.GeoJSON();
 var features_2_2 = format_2_2.readFeatures(json_2_2, 
