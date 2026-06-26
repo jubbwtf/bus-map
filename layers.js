@@ -37,9 +37,9 @@ var lyr_2_2 = new ol.layer.Vector({
                 declutter: false,
                 source:jsonSource_2_2, 
                 style: style_2_2,
-                popuplayertitle: 'маршрут2',
+                popuplayertitle: 'маршрут 1а',
                 interactive: true,
-                title: '<img src="styles/legend/2_2.png" /> маршрут2'
+                title: '<img src="styles/legend/2_2.png" /> маршрут 1а'
             });
 
 lyr_OSMStandard_0.setVisible(true);lyr__1.setVisible(true);lyr_2_2.setVisible(true);
